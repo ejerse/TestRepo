@@ -1,0 +1,305 @@
+---
+title: "Homework Assignment 1"
+author: "Edward Jerse"
+date: 'Assigned: Oct 24, 2020, Due Sun Nov 01, 2020 11:59PM'
+output:
+  html_document:
+    code_folding: show
+    toc: yes
+    toc_float: yes
+  pdf_document: default
+---
+
+## Data frame basics
+
+We will continue working with the nycflights dataset we looked at in class. **Please be sure to keep the data file in the same directory as the RMD file - your project directory.**
+
+First - make sure that you are reading the data correctly and doing all the data cleaning steps that we did in class. Feel free to go beyond our class work in cleaning the data if you feel the need. 
+
+I now would like you to answer the following - all in their own separate R code blocks.
+
+```{r}
+#Read in the dataset
+nyc <- read.csv("nycflights.csv")
+
+# Deleting the column X
+nyc$X <- NULL
+
+# Factorize necessary columns
+nyc$origin <- as.factor(nyc$origin)
+nyc$tailnum <- as.factor(nyc$tailnum)
+nyc$month <- as.factor(nyc$month)
+nyc$dest <- as.factor(nyc$dest)
+nyc$carrier <- as.factor(nyc$carrier)
+nyc$flight <- as.factor(nyc$flight)
+
+str(nyc)
+
+```
+
+
+### Data Exploration
+
+
+How many airlines are there? (Hint: levels and length can be useful here)
+```{r}
+length(levels(nyc$carrier))
+```
+
+
+How many flights there were by the airline with code OO? (Hint: nrow can be useful here along with logical indexing)
+```{r}
+AirDoubleZero <- nyc[nyc$carrier == "OO", ]
+nrow(AirDoubleZero)
+```
+
+
+How long is the shortest flight out of any NYC airport? (Hint: min can be useful, remember to handle NA values)
+```{r}
+min(nyc$air_time, na.rm = TRUE)
+```
+
+
+How many flights were there by United Airlines (code: UA) on Jan 12th 2013?
+```{r}
+UAJAN12 <- nyc[nyc$carrier == "UA" & nyc$time_hour == "2013-01-12", ]
+UAJAN12 <- nyc[nyc$carrier == "UA" & nyc$year == 2013 & nyc$day == 12 & nyc$month == 1, ]
+nrow(UAJAN12)
+```
+
+
+### Arrival Delay
+
+Lets focus on Arrival Delay.
+
+What was the average arrival delay for all airports and all airlines combined in Jan 2013?
+```{r}
+
+nycjan <- nyc[nyc$month == 1, ]
+mean(nycjan$arr_delay, na.rm = T)
+```
+
+
+Whats was the median arrival delay for all airports and all airlines combined in Jan 2013
+```{r}
+median(nycjan$arr_delay, na.rm = T)
+```
+
+
+Based on your answers to the two questions above, what can you say about the distribution of arrival delays? Provide your answer in a text paragraph form.
+
+This is a right skewed data set becasue the mean is greater than the median
+
+
+### Airline Performance
+
+
+Lets see if all airlines are equally terrible as far as flight arrival delays are concerned. For this question you will have to make sure that airline column is coded as a factor.
+
+Calculate average arrival delays by airline (Hint: look up the command `tapply`)
+```{r}
+delay_by_airline <- tapply(nyc$dep_delay, nyc$carrier, mean, na.rm = TRUE)
+delay_by_airline
+```
+
+
+Draw a Bar Plot of Average Arrival Delays for all the Airlines (Hint: command for making a Bar Plot is simply barplot)
+```{r}
+barplot(delay_by_airline)
+neg_delay_by_airline <- nyc[delay_by_airline < 0, ]
+```
+
+
+Which airline has the highest average arrival delay? Which airline has the smallest average arrival delay? Are there airlines that actually have negative average delay? Provide answer to this question in a text paragraph form using **inline R code**.
+
+The airline with the highest arrival delay is: `r names(delay_by_airline[delay_by_airline == max(delay_by_airline)])` and the amount of delay is: `r round(max(delay_by_airline),2)` minutes.
+The airline with the lowest arrival delay is: `r names(delay_by_airline[delay_by_airline == min(delay_by_airline)])` and the amount of delay is: `r round(min(delay_by_airline),2)` minutes.
+There are `r nrow(neg_delay_by_airline)` carriers that have a negative average delay.
+
+
+### Air Gain
+
+We now want to know whether airlines actually make up time when on air. 
+
+Create a new column named airgain such that airgain = (departure delay - arrival delay) : this is the amount of delay a flight made up while in air.
+```{r}
+nyc$airgain <- (nyc$dep_delay - nyc$arr_delay)
+```
+
+
+a) Explore airgain data - calculate suitable descriptive statistics and appropriate graphics to better understand this data. This part is open ended - you do what you feel works best for you.
+```{r}
+-#Mean Airgain
+round(mean(nyc$airgain, na.rm = TRUE), 2)
+
+#Median Airgain
+round(median(nyc$airgain, na.rm = TRUE), 2)
+
+#Max Airgain
+round(max(nyc$airgain, na.rm = TRUE), 2)
+
+#Min Airgain
+round(min(nyc$airgain, na.rm = TRUE), 2)
+
+```
+
+
+
+b) Answer the questions:
+
+Do airlines actually gain any time when in air on average?
+```{r}
+mean(nyc$airgain, na.rm = T)
+```
+Based on the calculation (i.e., because it is a positive number), it appears that airlines do gain time on average.
+
+
+
+Calculate average airgain for different airlines - which airlines do a better job, which do a worse job?
+```{r}
+airgain_by_airline <- tapply(nyc$airgain, nyc$carrier, mean, na.rm = TRUE)
+airgain_by_airline
+barplot(airgain_by_airline)
+```
+
+`r names(airgain_by_airline[airgain_by_airline < 0 ])` all lose time after taking off.
+`r names(airgain_by_airline[airgain_by_airline > 0 ])` all gain time after taking off.
+
+
+### Merging Data Frames
+
+> This section and the next is new compared to the class exercise. As you had an opportunity to work together in your breakout rooms for previous questions, this and the next section will carry a higher weight in grading for this HW.
+
+You can get detailed information about the physical planes in our dataset in this file: `planes.csv`. Download and save this file in your project directory.
+
+
+a) Read the `planes.csv` file using `read.csv` command. Do any data cleaning necessary.
+```{r}
+planes <- read.csv("planes.csv")
+str(planes)
+summary(planes)
+
+# Deleting the column X
+planes$X <- NULL
+```
+
+
+b) Merge the flights data and the planes data using the `merge` command. You should do the merge on the common column named `tailnum`. *getting this right may need some trial and error and getting some help*.
+```{r}
+nyc_planes <- merge(nyc, planes, by="tailnum")
+str(nyc_planes)
+
+#Fix the two year columns to clarify the data
+names(nyc_planes)[2] <- "year_departed"
+names(nyc_planes)[20] <- "year_plane_created"
+str(nyc_planes)
+```
+
+
+c) Now that you have a merged dataset, think of what interesting questions that you can ask that can be answered using the merged dataset. You are asked to pose five interesting questions and answer them. (For example: who are the top 10 manufacturers of planes that fly out of NYC airports?) **Be creative. Be bold. Ask questions that you would want to know answers to even if you were not doing this for a HW. **
+
+Question 1: What is the average size of planes (measured by average number of seats) that fly out of each NYC airport?
+```{r}
+seat_size_by_origin <- tapply(nyc_planes$seats, nyc_planes$origin, mean, na.rm = TRUE)
+seat_size_by_origin
+barplot(seat_size_by_origin) + title("Average Seat Size by Airport")
+```
+
+
+Question 2: Identify the fastest model plane in the data set.  What are the key NYC-origin routes flown by the fastest plane, listed with their maximum distance?
+```{r message = FALSE, warning = FALSE}
+max_speed_by_plane <- tapply(nyc_planes$speed, nyc_planes$model, max, na.rm = TRUE)
+names(max_speed_by_plane[max_speed_by_plane == max(max_speed_by_plane)])
+```
+The DC-9-51 is the fastest plane model.
+
+
+```{r}
+DC9_Flights <- nyc_planes[nyc_planes$model == "DC-9-51", ]
+DC9_max_dist <- tapply(DC9_Flights$distance, DC9_Flights$dest, max, na.rm = TRUE)
+DC9_max_dist <- as.data.frame(DC9_max_dist)
+DC9_max_dist_clean <- na.omit(DC9_max_dist)
+DC9_max_dist_clean
+
+```
+
+
+Question 3: On average, are there signicant differences in average flight distance depending on the type of engine used?
+```{r}
+distance_by_engine <- tapply(nyc_planes$distance, nyc_planes$engine, mean, na.rm = TRUE)
+distance_by_engine
+barplot(distance_by_engine) + title("Average Flight Distance by Engine Type")
+```
+It does appear that, on average, "Turbo" type engines are used for longer distance flights.
+
+
+Question 4: Using a regression model, which variables are statistically significant in determining arrival delays?
+```{r}
+arrival_model <- lm(arr_delay ~ type + manufacturer + model + engines + seats + speed + engine, data=nyc_planes, na.action = na.omit)
+summary(arrival_model)
+```
+Unfortunately, due to complications from missing data/NA values, many variables are 'not defined because of singularities.'  Of the remaining variables, none appear to be statistically significant at even a 10% significance level.
+
+
+
+Question 5: How many available plane seats fly out of each airport each month?
+```{r}
+
+nyc_planes_jan <- nyc_planes[nyc_planes$month == 1, ]
+seats_by_airport_jan <- tapply(nyc_planes_jan$seats, nyc_planes_jan$origin, sum, na.rm = TRUE)
+seats_by_airport_jan$Month <- (1)
+
+nyc_planes_feb <- nyc_planes[nyc_planes$month == 2, ]
+seats_by_airport_feb <- tapply(nyc_planes_feb$seats, nyc_planes_feb$origin, sum, na.rm = TRUE)
+seats_by_airport_feb$Month <- (2)
+
+nyc_planes_mar <- nyc_planes[nyc_planes$month == 3, ]
+seats_by_airport_mar <- tapply(nyc_planes_mar$seats, nyc_planes_mar$origin, sum, na.rm = TRUE)
+seats_by_airport_mar$Month <- (3)
+
+nyc_planes_apr <- nyc_planes[nyc_planes$month == 4, ]
+seats_by_airport_apr <- tapply(nyc_planes_apr$seats, nyc_planes_apr$origin, sum, na.rm = TRUE)
+seats_by_airport_apr$Month <- (4)
+
+nyc_planes_may <- nyc_planes[nyc_planes$month == 5, ]
+seats_by_airport_may <- tapply(nyc_planes_may$seats, nyc_planes_may$origin, sum, na.rm = TRUE)
+seats_by_airport_may$Month <- (5)
+
+nyc_planes_jun <- nyc_planes[nyc_planes$month == 6, ]
+seats_by_airport_jun <- tapply(nyc_planes_jun$seats, nyc_planes_jun$origin, sum, na.rm = TRUE)
+seats_by_airport_jun$Month <- (6)
+
+nyc_planes_jul <- nyc_planes[nyc_planes$month == 7, ]
+seats_by_airport_jul <- tapply(nyc_planes_jul$seats, nyc_planes_jul$origin, sum, na.rm = TRUE)
+seats_by_airport_jul$Month <- (7)
+
+nyc_planes_aug <- nyc_planes[nyc_planes$month == 8, ]
+seats_by_airport_aug <- tapply(nyc_planes_aug$seats, nyc_planes_aug$origin, sum, na.rm = TRUE)
+seats_by_airport_aug$Month <- (8)
+
+nyc_planes_sep <- nyc_planes[nyc_planes$month == 9, ]
+seats_by_airport_sep <- tapply(nyc_planes_sep$seats, nyc_planes_sep$origin, sum, na.rm = TRUE)
+seats_by_airport_sep$Month <- (9)
+
+nyc_planes_oct <- nyc_planes[nyc_planes$month == 10, ]
+seats_by_airport_oct <- tapply(nyc_planes_oct$seats, nyc_planes_oct$origin, sum, na.rm = TRUE)
+seats_by_airport_oct$Month <- (10)
+
+nyc_planes_nov <- nyc_planes[nyc_planes$month == 11, ]
+seats_by_airport_nov <- tapply(nyc_planes_nov$seats, nyc_planes_nov$origin, sum, na.rm = TRUE)
+seats_by_airport_nov$Month <- (11)
+
+nyc_planes_dec <- nyc_planes[nyc_planes$month == 12, ]
+seats_by_airport_dec <- tapply(nyc_planes_dec$seats, nyc_planes_dec$origin, sum, na.rm = TRUE)
+seats_by_airport_dec$Month <- (12)
+
+seats_by_airport <- rbind(seats_by_airport_jan, seats_by_airport_feb, 
+                          seats_by_airport_mar, seats_by_airport_apr,
+                          seats_by_airport_may, seats_by_airport_jun,
+                          seats_by_airport_jul, seats_by_airport_aug,
+                          seats_by_airport_sep,seats_by_airport_oct,
+                          seats_by_airport_nov, seats_by_airport_dec)
+
+seats_by_airport 
+```
+
